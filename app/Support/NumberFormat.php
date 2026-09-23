@@ -12,7 +12,6 @@ class NumberFormat
         $absolute = abs($value);
 
         [$divider, $suffix] = match (true) {
-            $absolute >= 1_000_000_000_000 => [1_000_000_000_000, 'T'],
             $absolute >= 1_000_000_000 => [1_000_000_000, 'B'],
             $absolute >= 1_000_000 => [1_000_000, 'M'],
             $absolute >= 1_000 => [1_000, 'K'],
