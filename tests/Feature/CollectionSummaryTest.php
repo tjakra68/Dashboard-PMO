@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Models\CollectionEntry;
+use App\Models\MasterProject;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -27,9 +27,9 @@ class CollectionSummaryTest extends TestCase
 
     public function test_summary_totals_are_calculated_up_to_the_selected_month(): void
     {
-        $this->seedEntry(month: 1, account: 'SIS', project: 'TLKM', soValue: 100_000_000_000, collection: 40_000_000_000, forecast: 60_000_000_000);
-        $this->seedEntry(month: 2, account: 'AST', project: 'IOH', soValue: 50_000_000_000, collection: 20_000_000_000, forecast: 30_000_000_000);
-        $this->seedEntry(month: 5, account: 'ASTEL', project: 'XL', soValue: 25_000_000_000, collection: 10_000_000_000, forecast: 15_000_000_000);
+        $this->seedProject('SIS', 'TLKM', 100_000_000_000, [1 => [60_000_000_000, 40_000_000_000]]);
+        $this->seedProject('AST', 'IOH', 50_000_000_000, [2 => [30_000_000_000, 20_000_000_000]]);
+        $this->seedProject('ASTEL', 'XL', 25_000_000_000, [5 => [15_000_000_000, 10_000_000_000]]);
 
         $response = $this->actingAs($this->user)->get(route('dashboard', ['year' => 2026, 'month' => 2]));
 
@@ -45,9 +45,9 @@ class CollectionSummaryTest extends TestCase
 
     public function test_filters_limit_the_summary_to_one_account_and_project(): void
     {
-        $this->seedEntry(month: 1, account: 'SIS', project: 'TLKM', soValue: 100_000_000_000, collection: 40_000_000_000, forecast: 60_000_000_000);
-        $this->seedEntry(month: 1, account: 'AST', project: 'TLKM', soValue: 80_000_000_000, collection: 30_000_000_000, forecast: 50_000_000_000);
-        $this->seedEntry(month: 1, account: 'SIS', project: 'EPS', soValue: 20_000_000_000, collection: 5_000_000_000, forecast: 10_000_000_000);
+        $this->seedProject('SIS', 'TLKM', 100_000_000_000, [1 => [60_000_000_000, 40_000_000_000]]);
+        $this->seedProject('AST', 'TLKM', 80_000_000_000, [1 => [50_000_000_000, 30_000_000_000]]);
+        $this->seedProject('SIS', 'EPS', 20_000_000_000, [1 => [10_000_000_000, 5_000_000_000]]);
 
         $response = $this->actingAs($this->user)->get(route('dashboard', [
             'year' => 2026,
@@ -66,8 +66,10 @@ class CollectionSummaryTest extends TestCase
 
     public function test_chart_exposes_monthly_and_cumulative_forecast(): void
     {
-        $this->seedEntry(month: 1, account: 'SIS', project: 'TLKM', soValue: 10_000_000_000, collection: 4_000_000_000, forecast: 6_000_000_000);
-        $this->seedEntry(month: 3, account: 'SIS', project: 'TLKM', soValue: 10_000_000_000, collection: 2_000_000_000, forecast: 4_000_000_000);
+        $this->seedProject('SIS', 'TLKM', 20_000_000_000, [
+            1 => [6_000_000_000, 6_000_000_000],
+            3 => [4_000_000_000, 0],
+        ]);
 
         $response = $this->actingAs($this->user)->get(route('dashboard', ['year' => 2026, 'month' => 3]));
 
@@ -80,6 +82,23 @@ class CollectionSummaryTest extends TestCase
         });
     }
 
+    public function test_account_rows_show_monthly_forecast_per_account(): void
+    {
+        $this->seedProject('SIS', 'TLKM', 10_000_000_000, [1 => [6_000_000_000, 6_000_000_000]]);
+        $this->seedProject('AST', 'ND', 10_000_000_000, [2 => [3_000_000_000, 0]]);
+
+        $response = $this->actingAs($this->user)->get(route('dashboard', ['year' => 2026, 'month' => 2]));
+
+        $response->assertOk();
+        $response->assertViewHas('accountRows', function (array $rows): bool {
+            return count($rows) === 2
+                && $rows[0]['label'] === 'SIS'
+                && $rows[0]['values'][0] === 6_000_000_000.0
+                && $rows[1]['label'] === 'AST'
+                && $rows[1]['values'][1] === 3_000_000_000.0;
+        });
+    }
+
     public function test_dashboard_renders_without_any_data(): void
     {
         $this->actingAs($this->user)
@@ -88,16 +107,25 @@ class CollectionSummaryTest extends TestCase
             ->assertSee('Belum ada data collection untuk filter ini.');
     }
 
-    protected function seedEntry(int $month, string $account, string $project, float $soValue, float $collection, float $forecast): void
+    /**
+     * @param  array<int, array{0: float|int, 1: float|int}>  $months  forecast/actual keyed by month number
+     */
+    protected function seedProject(string $account, string $project, float $soValue, array $months): void
     {
-        CollectionEntry::factory()->create([
+        $record = MasterProject::factory()->create([
             'year' => 2026,
-            'month' => $month,
             'account' => $account,
             'project' => $project,
             'so_value' => $soValue,
-            'collection' => $collection,
-            'forecast' => $forecast,
         ]);
+
+        foreach ($months as $month => [$forecast, $actual]) {
+            $record->months()->create([
+                'month' => $month,
+                'forecast' => $forecast,
+                'target' => $forecast,
+                'actual' => $actual,
+            ]);
+        }
     }
 }

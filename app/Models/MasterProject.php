@@ -2,14 +2,15 @@
 
 namespace App\Models;
 
-use Database\Factories\CollectionEntryFactory;
+use Database\Factories\MasterProjectFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class CollectionEntry extends Model
+class MasterProject extends Model
 {
-    /** @use HasFactory<CollectionEntryFactory> */
+    /** @use HasFactory<MasterProjectFactory> */
     use HasFactory;
 
     public const ACCOUNTS = ['SIS', 'ASTEL', 'AST'];
@@ -18,32 +19,37 @@ class CollectionEntry extends Model
 
     public const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
 
-    protected $fillable = [
-        'year',
-        'month',
-        'account',
-        'project',
-        'so_value',
-        'collection',
-        'forecast',
-    ];
+    protected $guarded = [];
 
-    protected function casts(): array
+    /**
+     * @return HasMany<MasterProjectMonth, $this>
+     */
+    public function months(): HasMany
     {
-        return [
-            'year' => 'integer',
-            'month' => 'integer',
-            'so_value' => 'float',
-            'collection' => 'float',
-            'forecast' => 'float',
-        ];
+        return $this->hasMany(MasterProjectMonth::class);
     }
 
+    /**
+     * @param  Builder<MasterProject>  $query
+     * @return Builder<MasterProject>
+     */
     public function scopeFilter(Builder $query, int $year, ?string $account, ?string $project): Builder
     {
         return $query
             ->where('year', $year)
             ->when($account, fn (Builder $q) => $q->where('account', $account))
             ->when($project, fn (Builder $q) => $q->where('project', $project));
+    }
+
+    protected function casts(): array
+    {
+        return [
+            'year' => 'integer',
+            'so_value' => 'float',
+            'collection' => 'float',
+            'outstanding' => 'float',
+            'target' => 'float',
+            'remaining' => 'float',
+        ];
     }
 }
