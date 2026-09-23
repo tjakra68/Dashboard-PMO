@@ -26,15 +26,13 @@ Chart.register(
 const compact = (value) => {
     const absolute = Math.abs(value);
     const [divider, suffix] =
-        absolute >= 1e12
-            ? [1e12, 'T']
-            : absolute >= 1e9
-              ? [1e9, 'B']
-              : absolute >= 1e6
-                ? [1e6, 'M']
-                : absolute >= 1e3
-                  ? [1e3, 'K']
-                  : [1, ''];
+        absolute >= 1e9
+            ? [1e9, 'B']
+            : absolute >= 1e6
+              ? [1e6, 'M']
+              : absolute >= 1e3
+                ? [1e3, 'K']
+                : [1, ''];
 
     return `${(value / divider).toFixed(2)}${suffix}`;
 };
@@ -95,16 +93,20 @@ const currentMonthMarker = {
         const text = `Collected ${compact(options.collected)}`;
         ctx.font = '600 11px Figtree, sans-serif';
         const width = ctx.measureText(text).width + 16;
+        const left = Math.min(
+            Math.max(x - width / 2, chartArea.left),
+            chartArea.right - width,
+        );
 
         ctx.fillStyle = '#7c3aed';
         ctx.beginPath();
-        ctx.roundRect(x - width / 2, chartArea.top - 22, width, 20, 6);
+        ctx.roundRect(left, chartArea.top + 4, width, 20, 6);
         ctx.fill();
 
         ctx.fillStyle = '#ffffff';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(text, x, chartArea.top - 12);
+        ctx.fillText(text, left + width / 2, chartArea.top + 14);
         ctx.restore();
     },
 };
