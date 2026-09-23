@@ -100,13 +100,13 @@ const currentMonthMarker = {
 
         ctx.fillStyle = '#7c3aed';
         ctx.beginPath();
-        ctx.roundRect(left, chartArea.top + 4, width, 20, 6);
+        ctx.roundRect(left, chartArea.bottom - 26, width, 20, 6);
         ctx.fill();
 
         ctx.fillStyle = '#ffffff';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(text, left + width / 2, chartArea.top + 14);
+        ctx.fillText(text, left + width / 2, chartArea.bottom - 16);
         ctx.restore();
     },
 };
